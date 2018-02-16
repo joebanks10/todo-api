@@ -102,11 +102,16 @@ app.post('/users', (req, res) => {
     password
   });
 
-  user.save().then(doc => {
-    res.send(doc);
-  }, e => {
-    res.status(400).send(e);
-  });
+  user.save()
+    .then(() => {
+      return user.generateAuthToken();
+    })
+    .then((token) => {
+      res.header('x-auth', token).send(user);
+    })
+    .catch((e) => {
+      res.status(400).send(e);
+    });
 });
 
 app.listen(port, () => {
