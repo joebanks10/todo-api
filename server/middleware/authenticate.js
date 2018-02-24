@@ -6,7 +6,7 @@ const authenticate = (req, res, next) => {
   User.findByToken(token)
     .then(user => {
       if (!user) {
-        Promise.reject();
+        return Promise.reject();
       }
 
       req.user = user;
