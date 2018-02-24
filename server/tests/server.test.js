@@ -251,7 +251,8 @@ describe('POST /users', () => {
           expect(user).toExist();
           expect(user.password).toNotBe(password);
           done();
-        });
+        })
+        .catch(e => done(e));
       });
   });
 
@@ -280,6 +281,67 @@ describe('POST /users', () => {
     const password = 'mypassword';
 
     request(app).post('/users')
+      .send({ email, password })
+      .expect(400)
+      .end(done);
+  });
+});
+
+describe('POST /users/login', () => {
+  it('should login user with valid credentials', (done) => {
+    const user = USERS[0];
+    const { email, password } = user;
+
+    request(app).post('/users/login')
+      .send({email, password})
+      .expect(200)
+      .expect(res => {
+        expect(res.body._id).toBe(user._id.toHexString());
+        expect(res.body.email).toBe(user.email);
+        expect(res.header['x-auth']).toExist();
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        User.findById(user._id).then(user => {
+          expect(user.tokens[1]).toInclude({
+            access: 'auth',
+            token: res.header['x-auth']
+          });
+          done();
+        })
+        .catch(e => done(e));
+      });
+  });
+
+  it('should reject login request with invalid password', (done) => {
+    const user = USERS[0];
+    const { email } = user;
+    const password = 'invalidpassword';
+
+    request(app).post('/users/login')
+      .send({ email, password })
+      .expect(400)
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        User.findById(user._id).then(user => {
+          expect(user.tokens.length).toBe(1);
+          done();
+        })
+        .catch(e => done(e));
+      });
+  });
+
+  it('should reject login request with invalid email', (done) => {
+    const email = 'nobody@example.com';
+    const password = 'nobodyspassword';
+
+    request(app).post('/users/login')
       .send({ email, password })
       .expect(400)
       .end(done);
